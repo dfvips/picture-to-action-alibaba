@@ -18,7 +18,7 @@ function search(info, tab) {
 		if (getxhr.readyState === 4 && getxhr.status === 200) {
 			contentType = getxhr.getResponseHeader('Content-Type');
 			if (contentType === 'image/jpeg' || contentType == 'image/png') {
-				gettoken(getxhr.response, tab, fName, contentType);
+				uploadImage(getxhr.response, tab, fName, contentType);
 			} else {
 				var blob = new Blob([new Uint8Array(getxhr.response)], {
 						type : contentType
@@ -35,12 +35,12 @@ function search(info, tab) {
 					var imagedata = canvas.toDataURL("image/jpeg");
 					imagedata = imagedata.replace(/^data:image\/(png|jpeg);base64,/, "");
 					bimageData = base64DecToArr(imagedata).buffer;
-					gettoken(bimageData, tab, fName, "image/jpeg")
+					uploadImage(bimageData, tab, fName, "image/jpeg")
 				}
 				img.src = url;
 			}
 		} else if (getxhr.readyState === 4 && getxhr.status !== 200) {
-			console.log("图片访问异常" + xhr.status);
+			console.log("图片访问异常" + getxhr.status);
 		}
 	};
 	getxhr.send();
@@ -59,36 +59,37 @@ function search(info, tab) {
 			    var imagedata = res;
 			    imagedata = imagedata.replace(/^data:image\/(png|jpeg);base64,/, "");
 				bimageData = base64DecToArr(imagedata).buffer;
-				gettoken(bimageData, tab, fName, "image/jpeg");
+				uploadImage(bimageData, tab, fName, "image/jpeg");
 			  })
 			})
 }
 }
 
-function gettoken(img, tab, fName, imgType){
-    var xhr = new XMLHttpRequest();
-	xhr.open('POST', 'https://open-s.1688.com/openservice/ossDataService?appName=pc_tusou&appKey='
-				+ encodeBase64('ossDataService;' + new Date().getTime()), true);
-	xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-	xhr.setRequestHeader('X-Requested-with', 'XMLHttpRequest');
-	xhr.setRequestHeader('Cache-Control', 'no-cache');
-	xhr.setRequestHeader('Accept', 'application/json, text/javascript, */*;q=0.01');
+// function gettoken(img, tab, fName, imgType){
+//     var xhr = new XMLHttpRequest();
+// 	xhr.open('POST', 'https://open-s.1688.com/openservice/ossDataService?appName=pc_tusou&appKey='
+// 				+ encodeBase64('ossDataService;' + new Date().getTime()), true);
+// 	// xhr.open('POST', 'https://stream-upload.taobao.com/api/upload.api?appkey=1688search&folderId=0&_input_charset=utf-8&useGtrSessionFilter=false');
+// 	xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+// 	xhr.setRequestHeader('X-Requested-with', 'XMLHttpRequest');
+// 	xhr.setRequestHeader('Cache-Control', 'no-cache');
+// 	xhr.setRequestHeader('Accept', 'application/json, text/javascript, */*;q=0.01');
 
-	xhr.onload = function (e) {
-		if (xhr.readyState === 4 && xhr.status === 200) {
-			var d = JSON.parse(xhr.response);
-			if (d.msg === 'OK') {
-				d = d.data;
-				uploadImage(img, tab, fName, "image/jpeg",d.accessid,d.policy,d.signature);
-			}
-		} else if (xhr.readyState === 4 && xhr.status !== 200) {
-			console.log("未知错误");
-		}
-	};
-	xhr.timeout = 5000; // s seconds timeout, is too long?
-    xhr.ontimeout = function () { console.log("请求超时"); }
-	xhr.send();
-}
+// 	xhr.onload = function (e) {
+// 		if (xhr.readyState === 4 && xhr.status === 200) {
+// 			var d = JSON.parse(xhr.response);
+// 			if (d.msg === 'OK') {
+// 				d = d.data;
+// 				uploadImage(img, tab, fName, "image/jpeg",d.accessid,d.policy,d.signature);
+// 			}
+// 		} else if (xhr.readyState === 4 && xhr.status !== 200) {
+// 			console.log("未知错误");
+// 		}
+// 	};
+// 	xhr.timeout = 5000; // s seconds timeout, is too long?
+//     xhr.ontimeout = function () { console.log("请求超时"); }
+// 	xhr.send();
+// }
 
 function encodeBase64(){
 	var encode = encodeURI(new Date().getTime());
@@ -102,12 +103,14 @@ function randomString(e) {
         r += t.charAt(Math.floor(Math.random() * n));
     return "cbuimgsearch/" + r + Date.parse((new Date).toDateString());
 }
-function uploadImage(img, tab, fName, imgType,accessid,policy,signature) {
-	var key = randomString(10);
+// function uploadImage(img, tab, fName, imgType,accessid,policy,signature) {
+ function uploadImage(img, tab, fName,imgType) {
+ 	fName="a.jpg";
 	var imgLength = img.byteLength;
 	var xhr = new XMLHttpRequest();
 	var boundary = 'moxieboundary'+ new Date().getTime();
-	xhr.open('POST', 'https://cbusearch.oss-cn-shanghai.aliyuncs.com/', true);
+	// xhr.open('POST', 'https://cbusearch.oss-cn-shanghai.aliyuncs.com/', true);
+	xhr.open('POST', 'https://stream-upload.taobao.com/api/upload.api?appkey=1688search&folderId=0&_input_charset=utf-8&useGtrSessionFilter=false');
 	xhr.setRequestHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
 	xhr.setRequestHeader('X-Requested-with', 'XMLHttpRequest');
 	xhr.setRequestHeader('Cache-Control', 'no-cache');
@@ -115,11 +118,14 @@ function uploadImage(img, tab, fName, imgType,accessid,policy,signature) {
 
 	xhr.onload = function (e) {
 		if (xhr.readyState === 4 && xhr.status === 200) {
-			if(xhr.response==""){
+			// if(xhr.response!=undefined){
+				var url = JSON.parse(xhr.response).object.url;
+				url = url.substring(url.lastIndexOf("/")+1);
 				chrome.tabs.create({
-					url : 'https://s.1688.com/youyuan/index.htm?tab=imageSearch&imageType=oss&imageAddress='+ key
+					url : "https://s.1688.com/youyuan/index.htm?tab=imageSearch&imageAddress="+ url+"&spm="
+					// url : 'https://s.1688.com/youyuan/index.htm?tab=imageSearch&imageType=oss&imageAddress='+ key
 				});
-			}
+			// }
 		} else if (xhr.readyState === 4 && xhr.status !== 200) {
 			console.log("请求失败" + xhr.status);
 		}
@@ -133,14 +139,8 @@ function uploadImage(img, tab, fName, imgType,accessid,policy,signature) {
 	reader.onloadend = function () {
 		request += 'Content-Disposition: form-data; name=\"name\"\r\n\r\n'+ fName+CRLF;
 		request += "--" + boundary + CRLF;
-		request += 'Content-Disposition: form-data; name=\"key\"\r\n\r\n' + key+CRLF;
-		request += "--" + boundary + CRLF;
-		request += 'Content-Disposition: form-data; name=\"signature\"\r\n\r\n' + signature+CRLF;
-		request += "--" + boundary + CRLF;
-		request += 'Content-Disposition: form-data; name=\"policy\"\r\n\r\n' + policy+CRLF;
-		request += "--" + boundary + CRLF;
-		request += 'Content-Disposition: form-data; name=\"OSSAccessKeyId\"\r\n\r\n' + accessid+CRLF;
-		request += "--" + boundary + CRLF;
+		// request += 'Content-Disposition: form-data; name=\"key\"\r\n\r\n' + key+CRLF;
+		// request += "--" + boundary + CRLF;
 		request += 'Content-Disposition: form-data; name=\"success_action_status\"\r\n\r\n200'+CRLF;
 		request += "--" + boundary + CRLF;
 		request += 'Content-Disposition: form-data; name=\"file\"; filename=\"' + fName + '\"' + CRLF;
